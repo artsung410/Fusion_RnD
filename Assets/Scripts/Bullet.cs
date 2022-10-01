@@ -11,7 +11,6 @@ public class Bullet : NetworkBehaviour
     [SerializeField]
     private float bulletSpeed = 5f;
 
-   
     public override void Spawned()
     {
         life = TickTimer.CreateFromSeconds(Runner, 5.0f);

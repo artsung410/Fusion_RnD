@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 
 public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
+
     [SerializeField]
     private NetworkRunner networkRunner = null; // NetworkRunner는 PhotonView와 동일하며, 동적으로 할당된다.
 
@@ -21,7 +22,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
     private void Start()
     {
-        StartGame(GameMode.AutoHostOrClient);
+        StartGame(gameMode);
     }
 
     async void StartGame(GameMode mode)
@@ -57,6 +58,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
+    // 특정 플레이어(runner)의 입력을 동기화 처리
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
         var data = new NetworkInputData();

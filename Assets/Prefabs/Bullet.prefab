@@ -95,8 +95,8 @@ GameObject:
   - component: {fileID: 5787849312403852069}
   - component: {fileID: 5787849312403852070}
   - component: {fileID: 7352556023160838707}
-  - component: {fileID: 1937093264231293947}
   - component: {fileID: 2532260197373936527}
+  - component: {fileID: 6105652940757501004}
   m_Layer: 0
   m_Name: Bullet
   m_TagString: Untagged
@@ -143,7 +143,7 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 5787849312403852070}
-  - {fileID: 1937093264231293947}
+  - {fileID: 6105652940757501004}
   SimulationBehaviours: []
 --- !u!114 &5787849312403852070
 MonoBehaviour:
@@ -175,7 +175,20 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &1937093264231293947
+--- !u!135 &2532260197373936527
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5787849312403852065}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.175
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &6105652940757501004
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -184,7 +197,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 5787849312403852065}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 1710889294, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _interpolationDataSource: 0
@@ -201,16 +214,3 @@ MonoBehaviour:
     RotBlendStart: 0.1
     RotBlendEnd: 0.5
     RotTeleportRadians: 1.5
---- !u!135 &2532260197373936527
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5787849312403852065}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 1
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.175
-  m_Center: {x: 0, y: 0, z: 0}
