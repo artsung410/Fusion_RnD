@@ -10,11 +10,15 @@ public class CharacterMovementHandler : NetworkBehaviour
     //Other components
     NetworkCharacterControllerPrototypeCustom networkCharacterContollerPrototypeCustom;
     HPHandler hPHandler;
+    NetworkInGameMessages networkInGameMessages;
+    NetworkPlayer networkPlayer;
 
     private void Awake()
     {
         networkCharacterContollerPrototypeCustom = GetComponent<NetworkCharacterControllerPrototypeCustom>();
         hPHandler = GetComponent<HPHandler>();
+        networkInGameMessages = GetComponent<NetworkInGameMessages>();
+        networkPlayer = GetComponent<NetworkPlayer>();
     }
 
     public override void FixedUpdateNetwork()
@@ -58,7 +62,6 @@ public class CharacterMovementHandler : NetworkBehaviour
 
             // 지하실로 떨어지면 다리 리스폰
             CheckFallRespawn();
-
         }
     }
 
@@ -69,6 +72,7 @@ public class CharacterMovementHandler : NetworkBehaviour
             if (Object.HasStateAuthority)
             {
                 Debug.Log($"{Time.time} Respawn due to fall outside of map at position {transform.position}");
+                networkInGameMessages.SendInGameRPCMessage(networkPlayer.nickName.ToString(), "fell off the world");
 
                 Respawn();
             }
