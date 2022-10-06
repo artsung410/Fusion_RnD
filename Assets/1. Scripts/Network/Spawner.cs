@@ -64,8 +64,15 @@ public class Spawner : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log("OnDisconnectedFromServer");
     }
 
-    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
+    public async void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
     {
+        Debug.Log("OnHostMigration");
+
+        // Shut donw the current runner
+        await runner.Shutdown(shutdownReason: ShutdownReason.HostMigration);
+
+        // Find the network runner handler and start host migration
+        FindObjectOfType<NetworkRunnerHandler>().StartHostMigration(hostMigrationToken);
     }
 
 
