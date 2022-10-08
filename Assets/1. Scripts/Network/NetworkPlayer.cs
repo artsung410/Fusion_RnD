@@ -13,13 +13,15 @@ public class NetworkPlayer : NetworkBehaviour, IPlayerLeft
     [Networked(OnChanged = nameof(OnNickNameChanged))]
     public NetworkString<_16> nickName { get; set; }
 
+    // Remote Client Token Hash
+    [Networked] public int token { get; set; }
+
     bool isPublicJoinMessageSent = false;
 
     public LocalCameraHandler localCameraHandler;
     public GameObject localUI;
 
-
-    // Other components
+    //Other components
     NetworkInGameMessages networkInGameMessages;
 
     void Awake()
@@ -27,85 +29,93 @@ public class NetworkPlayer : NetworkBehaviour, IPlayerLeft
         networkInGameMessages = GetComponent<NetworkInGameMessages>();
     }
 
+    // Start is called before the first frame update
+    void Start()
+    {
+
+    }
+
     public override void Spawned()
     {
-        // 월드상 입력권한을 가진 내 자신의 캐릭터가 스폰되었을 때
         if (Object.HasInputAuthority)
         {
             Local = this;
 
-            // 카메라상에 보이는 내 오브젝트 안보이게 하기
+            //Sets the layer of the local players model
             Utils.SetRenderLayerInChildren(playerModel, LayerMask.NameToLayer("LocalPlayerModel"));
 
-            // 메인 카메라 비활성화
-            Camera.main.gameObject.SetActive(false);
+            //Disable main camera
+            if (Camera.main != null)
+                Camera.main.gameObject.SetActive(false);
 
-            // PlayerPrefs에는 많은 정보가 담겨있다.
-            RPC_SetNickName(PlayerPrefs.GetString("PlayerNickname"));
+            //Enable 1 audio listner
+            AudioListener audioListener = GetComponentInChildren<AudioListener>(true);
+            audioListener.enabled = true;
 
-            Debug.Log("Spawned Local Player");
+
+            //Enable the local camera
+            localCameraHandler.localCamera.enabled = true;
+
+            //Detach camera if enabled
+            localCameraHandler.transform.parent = null;
+
+            //Enable UI for local player
+            localUI.SetActive(true);
+
+            RPC_SetNickName(GameManager.instance.playerNickName);
+
+            Debug.Log("Spawned local player");
         }
-
-        // 로컬플레이어가 아닌 다른 클라이언트의 오브젝트가 스폰되었을 때
         else
         {
-            // 로컬플레이어가 아니면 카메라는 비활성화 처리
-            Camera localCamera = GetComponentInChildren<Camera>();
-            localCamera.enabled = false;
+            //Disable the local camera for remote players
+            localCameraHandler.localCamera.enabled = false;
 
-            // 로컬플레이어가 아니면 오디오 리스너 끄기.
+            //Disable UI for remote player
+            localUI.SetActive(false);
+
+            //Only 1 audio listner is allowed in the scene so disable remote players audio listner
             AudioListener audioListener = GetComponentInChildren<AudioListener>();
             audioListener.enabled = false;
 
-            // Disable UI for remote player
-            localUI.SetActive(false);
-
-            Debug.Log("Spawned remote Player");
+            Debug.Log($"{Time.time} Spawned remote player");
         }
 
-        // Set the player as a player object
+        //Set the Player as a player object
         Runner.SetPlayerObject(Object.InputAuthority, Object);
 
-        // 다른 플레이어에게 말하기
+        //Make it easier to tell which player is which.
         transform.name = $"P_{Object.Id}";
     }
 
-
     public void PlayerLeft(PlayerRef player)
-    { 
+    {
         if (Object.HasStateAuthority)
         {
-            // 떠난 네트워크 오브젝트를 리턴
-            // 여러명 나간걸로 뜨기때문에, 특정 닉네임만 뜨도록 설정함.
-
             if (Runner.TryGetPlayerObject(player, out NetworkObject playerLeftNetworkObject))
             {
                 if (playerLeftNetworkObject == Object)
-                {
                     Local.GetComponent<NetworkInGameMessages>().SendInGameRPCMessage(playerLeftNetworkObject.GetComponent<NetworkPlayer>().nickName.ToString(), "left");
-                }
             }
+
         }
 
 
         if (player == Object.InputAuthority)
-        {
             Runner.Despawn(Object);
-        }    
-    }
 
+    }
     static void OnNickNameChanged(Changed<NetworkPlayer> changed)
     {
-        Debug.Log($"{Time.time} OnHPchanged value {changed.Behaviour.nickName}");
+        Debug.Log($"{Time.time} OnHPChanged value {changed.Behaviour.nickName}");
+
         changed.Behaviour.OnNickNameChanged();
     }
 
-    // 클라이언트는 RPC 메세지를 서버로 보낸다.
-    // 내 이름은 누구누구입니다 알리고, 그리고 다른 클라이언트에게도 표시가 된다.
-    // RPC를 사용하려면 NetworkBehaviour를 상속받아야 한다.
     private void OnNickNameChanged()
     {
-        Debug.Log($"Nickname changed for player to {nickName} for Player {gameObject.name}");
+        Debug.Log($"Nickname changed for player to {nickName} for player {gameObject.name}");
+
         playerNickNameTM.text = nickName.ToString();
     }
 
@@ -121,5 +131,12 @@ public class NetworkPlayer : NetworkBehaviour, IPlayerLeft
 
             isPublicJoinMessageSent = true;
         }
+    }
+
+    void OnDestroy()
+    {
+        //Get rid of the local camera if we get destroyed as a new one will be spawned with the new Network player
+        if (localCameraHandler != null)
+            Destroy(localCameraHandler.gameObject);
     }
 }

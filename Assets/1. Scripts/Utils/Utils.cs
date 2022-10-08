@@ -14,12 +14,9 @@ public static class Utils
         foreach (Transform trans in transform.GetComponentsInChildren<Transform>(true))
         {
             if (trans.CompareTag("IgnoreLayerChange"))
-            {
                 continue;
-            }
 
             trans.gameObject.layer = layerNumber;
-
         }
     }
 }

@@ -24,6 +24,8 @@ public class MainMenuUIHandler : MonoBehaviour
         // 하드디스크에 저장됨, 그리고 게임이 시작했을때 HasKey로 호출 가능
         PlayerPrefs.Save();
 
+        GameManager.instance.playerNickName = inputField.text;
+
         SceneManager.LoadScene("GameScene");
     }
 }

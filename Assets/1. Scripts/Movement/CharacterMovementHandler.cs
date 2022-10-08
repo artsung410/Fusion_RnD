@@ -8,17 +8,22 @@ public class CharacterMovementHandler : NetworkBehaviour
     bool isRespawnRequested = false;
 
     //Other components
-    NetworkCharacterControllerPrototypeCustom networkCharacterContollerPrototypeCustom;
-    HPHandler hPHandler;
+    NetworkCharacterControllerPrototypeCustom networkCharacterControllerPrototypeCustom;
+    HPHandler hpHandler;
     NetworkInGameMessages networkInGameMessages;
     NetworkPlayer networkPlayer;
 
     private void Awake()
     {
-        networkCharacterContollerPrototypeCustom = GetComponent<NetworkCharacterControllerPrototypeCustom>();
-        hPHandler = GetComponent<HPHandler>();
+        networkCharacterControllerPrototypeCustom = GetComponent<NetworkCharacterControllerPrototypeCustom>();
+        hpHandler = GetComponent<HPHandler>();
         networkInGameMessages = GetComponent<NetworkInGameMessages>();
         networkPlayer = GetComponent<NetworkPlayer>();
+    }
+
+    // Start is called before the first frame update
+    void Start()
+    {
     }
 
     public override void FixedUpdateNetwork()
@@ -31,20 +36,18 @@ public class CharacterMovementHandler : NetworkBehaviour
                 return;
             }
 
-            // Don't update the clients position when they are dead
-            if (hPHandler.isDead)
-            {
+            //Don't update the clients position when they are dead
+            if (hpHandler.isDead)
                 return;
-            }
         }
 
-        // 네트워크에서 입력을 가져온다.
+        //Get the input from the network
         if (GetInput(out NetworkInputData networkInputData))
         {
-            // 겨냥하고있는 방향으로 회전
+            //Rotate the transform according to the client aim vector
             transform.forward = networkInputData.aimForwardVector;
 
-            // Cancel out rotation on X axis as we don't want our character to tilt
+            //Cancel out rotation on X axis as we don't want our character to tilt
             Quaternion rotation = transform.rotation;
             rotation.eulerAngles = new Vector3(0, rotation.eulerAngles.y, rotation.eulerAngles.z);
             transform.rotation = rotation;
@@ -52,17 +55,17 @@ public class CharacterMovementHandler : NetworkBehaviour
             //Move
             Vector3 moveDirection = transform.forward * networkInputData.movementInput.y + transform.right * networkInputData.movementInput.x;
             moveDirection.Normalize();
-            networkCharacterContollerPrototypeCustom.Move(moveDirection);
+
+            networkCharacterControllerPrototypeCustom.Move(moveDirection);
 
             //Jump
-            if(networkInputData.isJumpPressed)
-            {
-                networkCharacterContollerPrototypeCustom.Jump();
-            }
+            if (networkInputData.isJumpPressed)
+                networkCharacterControllerPrototypeCustom.Jump();
 
-            // 지하실로 떨어지면 다리 리스폰
+            //Check if we've fallen off the world.
             CheckFallRespawn();
         }
+
     }
 
     void CheckFallRespawn()
@@ -72,10 +75,12 @@ public class CharacterMovementHandler : NetworkBehaviour
             if (Object.HasStateAuthority)
             {
                 Debug.Log($"{Time.time} Respawn due to fall outside of map at position {transform.position}");
+
                 networkInGameMessages.SendInGameRPCMessage(networkPlayer.nickName.ToString(), "fell off the world");
 
                 Respawn();
             }
+
         }
     }
 
@@ -86,15 +91,16 @@ public class CharacterMovementHandler : NetworkBehaviour
 
     void Respawn()
     {
-        networkCharacterContollerPrototypeCustom.TeleportToPosition(Utils.GetRandomSpawnPoint());
+        networkCharacterControllerPrototypeCustom.TeleportToPosition(Utils.GetRandomSpawnPoint());
 
-        hPHandler.OnRespawned();
+        hpHandler.OnRespawned();
 
         isRespawnRequested = false;
     }
 
     public void SetCharacterControllerEnabled(bool isEnabled)
     {
-        networkCharacterContollerPrototypeCustom.Controller.enabled = isEnabled;
+        networkCharacterControllerPrototypeCustom.Controller.enabled = isEnabled;
     }
+
 }

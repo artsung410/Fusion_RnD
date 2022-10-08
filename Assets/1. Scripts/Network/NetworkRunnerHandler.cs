@@ -15,28 +15,26 @@ public class NetworkRunnerHandler : MonoBehaviour
 
     NetworkRunner networkRunner;
 
-
+    // Start is called before the first frame update
     void Start()
     {
         networkRunner = Instantiate(networkRunnerPrefab);
         networkRunner.name = "Network runner";
 
-        // AutoHostOrClient : 호스트가 없으면 첫번째 클라이언트가 호스트
-        var clientTask = InitializeNetworkRunner(networkRunner, GameMode.AutoHostOrClient, NetAddress.Any(), SceneManager.GetActiveScene().buildIndex, null);
+        var clientTask = InitializeNetworkRunner(networkRunner, GameMode.AutoHostOrClient, GameManager.instance.GetConnectionToken(), NetAddress.Any(), SceneManager.GetActiveScene().buildIndex, null);
 
         Debug.Log($"Server NetworkRunner started.");
     }
 
     public void StartHostMigration(HostMigrationToken hostMigrationToken)
     {
-        // 기존 러너가 삭제되고, 호스트가 이동하면서 새로운 러너가 생성된다.
+        //Create a new Network runner, old one is being shut down
         networkRunner = Instantiate(networkRunnerPrefab);
         networkRunner.name = "Network runner - Migrated";
 
-        // AutoHostOrClient : 호스트가 없으면 첫번째 클라이언트가 호스트
         var clientTask = InitializeNetworkRunnerHostMigration(networkRunner, hostMigrationToken);
 
-        Debug.Log($"Host migration started.");
+        Debug.Log($"Host migration started");
     }
 
     INetworkSceneManager GetSceneManager(NetworkRunner runner)
@@ -45,19 +43,17 @@ public class NetworkRunnerHandler : MonoBehaviour
 
         if (sceneManager == null)
         {
-            // Handle networked objects that already exitis in the scene
+            //Handle networked objects that already exits in the scene
             sceneManager = runner.gameObject.AddComponent<NetworkSceneManagerDefault>();
         }
 
         return sceneManager;
-    } 
+    }
 
-
-    protected virtual Task InitializeNetworkRunner(NetworkRunner runner, GameMode gameMode, NetAddress address, SceneRef scene, Action<NetworkRunner> initialized)
+    protected virtual Task InitializeNetworkRunner(NetworkRunner runner, GameMode gameMode, byte[] connectionToken, NetAddress address, SceneRef scene, Action<NetworkRunner> initialized)
     {
         var sceneManager = GetSceneManager(runner);
 
-        // runner가 입력을 받을 수 있도록 처리.
         runner.ProvideInput = true;
 
         return runner.StartGame(new StartGameArgs
@@ -67,7 +63,8 @@ public class NetworkRunnerHandler : MonoBehaviour
             Scene = scene,
             SessionName = "TestRoom",
             Initialized = initialized,
-            SceneManager = sceneManager
+            SceneManager = sceneManager,
+            ConnectionToken = connectionToken
         });
     }
 
@@ -75,24 +72,65 @@ public class NetworkRunnerHandler : MonoBehaviour
     {
         var sceneManager = GetSceneManager(runner);
 
-        // runner가 입력을 받을 수 있도록 처리.
         runner.ProvideInput = true;
 
         return runner.StartGame(new StartGameArgs
         {
-            // GameMode = gameMode, // ignored, Game Mode comes with the HostMigrationToken
-            // Address = address,
-            // Scene = scene,
-            // SessionName = "TestRoom",
-            // Initialized = initialized,
+            //GameMode = gameMode,  // ignored, Game Mode comes with the HostMigrationToken
+            //Address = address,
+            //Scene = scene,
+            //SessionName = "TestRoom",
+            //Initialized = initialized,
             SceneManager = sceneManager,
             HostMigrationToken = hostMigrationToken, // contains all necessary info to restart the Runner
-            HostMigrationResume = HostMigrationResume // contains all necessary info to restart the Runner
+            HostMigrationResume = HostMigrationResume, // this will be invoked to resume the simulation
+            ConnectionToken = GameManager.instance.GetConnectionToken()
         });
     }
 
     void HostMigrationResume(NetworkRunner runner)
     {
+        Debug.Log($"HostMigrationResume started");
 
+        // Get a reference for each Network object from the old Host
+        foreach (var resumeNetworkObject in runner.GetResumeSnapshotNetworkObjects())
+        {
+            // Grab all the player objects, they have a NetworkCharacterControllerPrototypeCustom
+            if (resumeNetworkObject.TryGetBehaviour<NetworkCharacterControllerPrototypeCustom>(out var characterController))
+            {
+                runner.Spawn(resumeNetworkObject, position: characterController.ReadPosition(), rotation: characterController.ReadRotation(), onBeforeSpawned: (runner, newNetworkObject) =>
+                {
+                    newNetworkObject.CopyStateFrom(resumeNetworkObject);
+
+                    // Copy info state from old Behaviour to new behaviour
+                    if (resumeNetworkObject.TryGetBehaviour<HPHandler>(out HPHandler oldHPHandler))
+                    {
+                        HPHandler newHPHandler = newNetworkObject.GetComponent<HPHandler>();
+                        newHPHandler.CopyStateFrom(oldHPHandler);
+
+                        newHPHandler.skipSettingStartValues = true;
+                    }
+
+                    //Map the connection token with the new Network player
+                    if (resumeNetworkObject.TryGetBehaviour<NetworkPlayer>(out var oldNetworkPlayer))
+                    {
+                        // Store Player token for reconnection
+                        FindObjectOfType<Spawner>().SetConnectionTokenMapping(oldNetworkPlayer.token, newNetworkObject.GetComponent<NetworkPlayer>());
+                    }
+
+                });
+            }
+        }
+
+        StartCoroutine(CleanUpHostMigrationCO());
+
+        Debug.Log($"HostMigrationResume completed");
+    }
+
+    IEnumerator CleanUpHostMigrationCO()
+    {
+        yield return new WaitForSeconds(5.0f);
+
+        FindObjectOfType<Spawner>().OnHostMigrationCleanUp();
     }
 }
